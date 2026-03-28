@@ -74,9 +74,22 @@ app.use((err, req, res, next) => {
 });
 
 // 5. Start Server ──────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
+const startServer = async () => {
+  try {
+    await connectDB();
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ Failed to start server:", err);
+    // On Render, we want to listen anyway so the Health Check passes 
+    // even if the DB is down, allowing us to see logs.
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`⚠️ Server running on port ${PORT} (DB CONNECTION FAILED)`);
+    });
+  }
+};
 
-// Binding to 0.0.0.0 is critical for Render's internal networking
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+startServer();
