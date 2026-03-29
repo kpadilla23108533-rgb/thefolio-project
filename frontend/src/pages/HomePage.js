@@ -1,4 +1,3 @@
-// frontend/src/pages/HomePage.js
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../api/axios';
@@ -10,10 +9,22 @@ function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
 
+  /**
+   * 1. Dynamic Image Path
+   * We extract the domain from our API config so images work 
+   * everywhere without hardcoding "localhost".
+   */
+  const IMAGE_BASE_URL = API.defaults.baseURL 
+    ? API.defaults.baseURL.replace('/api', '') 
+    : 'http://localhost:5000';
+
   useEffect(() => {
     API.get('/posts')
       .then(res => setPosts(res.data))
-      .catch(() => setError('Failed to load posts. Is the server running?'))
+      .catch((err) => {
+        console.error("Fetch error:", err);
+        setError('Failed to load posts. Is the server running?');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -25,39 +36,21 @@ function HomePage() {
         <p style={{ color: '#8C7E72', maxWidth: '520px', margin: '0 auto 20px' }}>
           Explore local gems, share your adventures, and discover stories from fellow travelers.
         </p>
-        {user ? (
-          <Link
-            to="/create-post"
-            style={{
-              display: 'inline-block',
-              padding: '10px 28px',
-              background: '#475522',
-              color: '#E2DCD6',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontWeight: 'bold',
-              fontSize: '0.95rem',
-            }}
-          >
-            Write a Post
-          </Link>
-        ) : (
-          <Link
-            to="/register"
-            style={{
-              display: 'inline-block',
-              padding: '10px 28px',
-              background: '#475522',
-              color: '#E2DCD6',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontWeight: 'bold',
-              fontSize: '0.95rem',
-            }}
-          >
-            Join the Community
-          </Link>
-        )}
+        <Link
+          to={user ? "/create-post" : "/register"}
+          style={{
+            display: 'inline-block',
+            padding: '10px 28px',
+            background: '#475522',
+            color: '#E2DCD6',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+            fontSize: '0.95rem',
+          }}
+        >
+          {user ? 'Write a Post' : 'Join the Community'}
+        </Link>
       </div>
 
       {/* Posts feed */}
@@ -107,7 +100,7 @@ function HomePage() {
                 border: '1px solid #d2b48c',
                 borderRadius: '12px',
                 overflow: 'hidden',
-                background: 'var(--content-bg)',
+                background: 'var(--content-bg, #fff)',
                 transition: 'box-shadow 0.2s, transform 0.2s',
                 cursor: 'pointer',
               }}
@@ -120,10 +113,10 @@ function HomePage() {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                {/* Cover image */}
+                {/* 2. FIXED: Dynamic Image Source */}
                 {post.image ? (
                   <img
-                    src={`http://localhost:5000/uploads/${post.image}`}
+                    src={`${IMAGE_BASE_URL}/uploads/${post.image}`}
                     alt={post.title}
                     style={{
                       width: '100%',
@@ -135,7 +128,7 @@ function HomePage() {
                 ) : (
                   <div style={{
                     width: '100%',
-                    height: '100px',
+                    height: '180px',
                     background: 'linear-gradient(135deg, #475522, #2a8fac)',
                     display: 'flex',
                     alignItems: 'center',
@@ -180,7 +173,7 @@ function HomePage() {
                     borderTop: '1px solid #e8ddd3',
                     paddingTop: '10px',
                   }}>
-                    <span>✍️ {post.author?.name || 'Unknown'}</span>
+                    <span>✍️ {post.author?.username || post.author?.name || 'Explorer'}</span>
                     <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
