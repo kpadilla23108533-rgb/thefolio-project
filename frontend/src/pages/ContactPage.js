@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import API from '../api/axios'; // Ensure this path is correct
+import API from '../api/axios'; 
 
 function ContactPage() {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false); // Added loading state
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,16 +21,21 @@ function ContactPage() {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
+      setLoading(true); // Disable button while sending
       try {
-        await API.post('/contact', formData);
+        // This will now hit ...onrender.com/api/contact
+        await API.post('/contact', formData); 
+        
         alert(`Thank you for the recommendation, ${formData.name}!`);
         setFormData({ name: '', email: '', message: '' });
       } catch (err) {
-        alert("Failed to send message. Please try again.");
+        console.error("Contact Error:", err.response);
+        alert(err.response?.data?.message || "Failed to send message. Please try again.");
+      } finally {
+        setLoading(false);
       }
     }
   };
-
   return (
     <main className="content">
       {/* Contact form — from original contact.html */}
