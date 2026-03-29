@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const cors = require('cors'); // Only declare this once!
 const path = require('path');
 const connectDB = require('./config/db');
 
@@ -12,38 +12,37 @@ const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 
-// 1. Connect Database (Non-blocking for Vercel)
+// 1. Connect Database
 connectDB().catch(err => console.error("Database connection error:", err));
 
-// 2. Middleware
-const cors = require('cors');
-
+// 2. Middleware & CORS
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://your-frontend-url.vercel.app' // Add your actual Vercel URL here
+  'https://thefolio-project-gamma.vercel.app', // Your actual Vercel URL
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
 
-// 3. Static Files
-// Note: Local uploads won't persist on Vercel. Consider Cloudinary for production.
-const uploadDir = path.join(__dirname, 'uploads');
-app.use('/uploads', express.static(uploadDir));
+// 3. Static Files (Note: Vercel is read-only; use Cloudinary for real uploads)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 4. API Routes
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', message: '🚀 API is running' });
+  res.status(200).json({ status: 'healthy' });
 });
 
 app.use('/api/auth', authRoutes);
@@ -51,21 +50,11 @@ app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Root route (Important: Keep this simple for testing)
 app.get('/', (req, res) => {
-  res.send('🚀 API is running and healthy!');
+  res.send('🚀 API is running!');
 });
 
-// 5. Error Handling
-app.use((err, req, res, next) => {
-  console.error('Error Stack:', err.stack);
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'production' ? {} : err.message 
-  });
-});
-
-// 6. Start Server (Only for Local/Render, NOT for Vercel functions)
+// 5. Start Server logic for Render/Local
 if (process.env.NODE_ENV !== 'production' || process.env.RENDER) {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, '0.0.0.0', () => {
@@ -73,4 +62,4 @@ if (process.env.NODE_ENV !== 'production' || process.env.RENDER) {
   });
 }
 
-module.exports = app; // Critical for Vercel
+module.exports = app;
