@@ -4,6 +4,9 @@ const path = require('path');
 const fs = require('fs');
 
 // Create uploads/ folder if it does not exist yet
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
 
 // Where and how to save uploaded files
 const storage = multer.diskStorage({
