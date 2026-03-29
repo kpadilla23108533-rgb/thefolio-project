@@ -4,8 +4,12 @@ import axios from 'axios';
 const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const API = axios.create({
-  baseURL: baseURL,
+  // This looks for a variable in Vercel/Render, otherwise defaults to local
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
 });
+
+// Important: This allows the browser to send cookies/sessions if you use them
+API.defaults.withCredentials = true;
 
 // Attach JWT token to every request
 API.interceptors.request.use((config) => {
