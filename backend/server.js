@@ -16,20 +16,22 @@ const app = express();
 connectDB().catch(err => console.error("Database connection error:", err));
 
 // 2. Middleware
+const cors = require('cors');
+
 const allowedOrigins = [
   'http://localhost:3000',
-  process.env.FRONTEND_URL
-].filter(Boolean);
+  'https://your-frontend-url.vercel.app' // Add your actual Vercel URL here
+];
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('CORS policy violation'), false);
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(null, true);
   },
-  credentials: true 
+  credentials: true
 }));
 
 app.use(express.json());
