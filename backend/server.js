@@ -34,7 +34,17 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+app.post('/api/contact', (req, res) => {
+  const { name, email, message } = req.body;
+  
+  // Logic: In a real app, you'd save this to a 'Contacts' collection in MongoDB
+  console.log(`📩 New Message from ${name} (${email}): ${message}`);
 
+  res.status(200).json({ 
+    success: true, 
+    message: "Thank you! Your recommendation has been received." 
+  });
+});
 app.use(express.json());
 
 // 3. Static Files (Note: Vercel is read-only; use Cloudinary for real uploads)
