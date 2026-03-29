@@ -58,36 +58,34 @@ function RegisterPage() {
 
     setErrors(errs);
 
-    if (Object.keys(errs).length === 0) {
-      setLoading(true);
-      try {
-        /**
-         * FIXED: We use the relative path '/auth/register'. 
-         * Axios will combine this with your baseURL from axios.js.
-         * Do NOT put the full domain here.
-         */
-        await API.post('/auth/register', {
-          name: formData.fullname,
-          email: formData.email,
-          username: formData.username,
-          password: formData.password,
-          experience: formData.experience,
-          dob: formData.dob // Added dob to the payload in case your backend needs it
-        });
+if (Object.keys(errs).length === 0) {
+  setLoading(true);
+  try {
+    // THIS IS THE PLACE
+    const response = await API.post('/auth/register', {
+      name: formData.fullname,      // Mapping frontend 'fullname' to backend 'name'
+      email: formData.email,
+      username: formData.username,
+      password: formData.password,
+      experience: formData.experience,
+      dob: formData.dob
+    });
 
-        alert("Registration successful! Welcome to the club.");
-        navigate('/login');
-      } catch (err) {
-        // Detailed error logging to help you debug in the console
-        console.error("Registration Error Details:", err.response);
-        
-        setErrors({ 
-          server: err.response?.data?.message || "Registration failed. The server might be unreachable." 
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
+    // If the request succeeds:
+    console.log("Server Response:", response.data);
+    alert("Registration successful! Welcome to the club.");
+    navigate('/login');
+
+  } catch (err) {
+    // If the request fails (404, 405, 500, etc.):
+    console.error("Registration Error:", err.response);
+    setErrors({ 
+      server: err.response?.data?.message || "Registration failed. Check your connection." 
+    });
+  } finally {
+    setLoading(false);
+  }
+}
   };
 
   return (
