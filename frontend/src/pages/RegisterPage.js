@@ -4,7 +4,7 @@ import API from '../api/axios';
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false); // Added loading state
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullname: '',
     email: '',
@@ -20,9 +20,8 @@ function RegisterPage() {
 
   const update = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear specific error when user starts typing again
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
+    if (errors[field] || errors.server) {
+      setErrors(prev => ({ ...prev, [field]: null, server: null }));
     }
   };
 
@@ -62,17 +61,29 @@ function RegisterPage() {
     if (Object.keys(errs).length === 0) {
       setLoading(true);
       try {
+        /**
+         * FIXED: We use the relative path '/auth/register'. 
+         * Axios will combine this with your baseURL from axios.js.
+         * Do NOT put the full domain here.
+         */
         await API.post('/auth/register', {
           name: formData.fullname,
           email: formData.email,
           username: formData.username,
           password: formData.password,
-          experience: formData.experience
+          experience: formData.experience,
+          dob: formData.dob // Added dob to the payload in case your backend needs it
         });
+
         alert("Registration successful! Welcome to the club.");
         navigate('/login');
       } catch (err) {
-        setErrors({ server: err.response?.data?.message || "Registration failed. Try again." });
+        // Detailed error logging to help you debug in the console
+        console.error("Registration Error Details:", err.response);
+        
+        setErrors({ 
+          server: err.response?.data?.message || "Registration failed. The server might be unreachable." 
+        });
       } finally {
         setLoading(false);
       }
@@ -106,32 +117,32 @@ function RegisterPage() {
           <label htmlFor="fullname">Full Name:</label>
           <input type="text" id="fullname" placeholder="Enter your full name"
             value={formData.fullname} onChange={e => update('fullname', e.target.value)} />
-          {errors.fullname && <span className="error-text" style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.fullname}</span>}
+          {errors.fullname && <span style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.fullname}</span>}
 
           <label htmlFor="email">Email Address:</label>
           <input type="email" id="email" placeholder="example@mail.com"
             value={formData.email} onChange={e => update('email', e.target.value)} />
-          {errors.email && <span className="error-text" style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.email}</span>}
+          {errors.email && <span style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.email}</span>}
 
           <label htmlFor="username">Username:</label>
           <input type="text" id="username" placeholder="Choose a username"
             value={formData.username} onChange={e => update('username', e.target.value)} />
-          {errors.username && <span className="error-text" style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.username}</span>}
+          {errors.username && <span style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.username}</span>}
 
           <label htmlFor="password">Password:</label>
           <input type="password" id="password" placeholder="Min. 8 characters"
             value={formData.password} onChange={e => update('password', e.target.value)} />
-          {errors.password && <span className="error-text" style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.password}</span>}
+          {errors.password && <span style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.password}</span>}
 
           <label htmlFor="confirmPassword">Confirm Password:</label>
           <input type="password" id="confirmPassword" placeholder="Repeat your password"
             value={formData.confirmPassword} onChange={e => update('confirmPassword', e.target.value)} />
-          {errors.confirmPassword && <span className="error-text" style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.confirmPassword}</span>}
+          {errors.confirmPassword && <span style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.confirmPassword}</span>}
 
           <label htmlFor="dob">Date of Birth:</label>
           <input type="date" id="dob"
             value={formData.dob} onChange={e => update('dob', e.target.value)} />
-          {errors.dob && <span className="error-text" style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.dob}</span>}
+          {errors.dob && <span style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.dob}</span>}
 
           <p style={{ marginTop: '15px' }}><strong>Experience Level:</strong></p>
           <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
@@ -149,7 +160,7 @@ function RegisterPage() {
               </label>
             ))}
           </div>
-          {errors.experience && <span className="error-text" style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.experience}</span>}
+          {errors.experience && <span style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.experience}</span>}
 
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '20px 0' }}>
             <input
@@ -160,13 +171,23 @@ function RegisterPage() {
             />
             <span style={{ fontSize: '0.9rem' }}>I agree to the terms and conditions</span>
           </label>
-          {errors.terms && <span className="error-text" style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.terms}</span>}
+          {errors.terms && <span style={{color: '#b43c3c', fontSize: '0.8rem'}}>{errors.terms}</span>}
 
           <input 
             type="submit" 
-            id="newcolor" 
+            className="btn-submit" 
             value={loading ? 'Creating Account...' : 'Sign up for free'} 
             disabled={loading}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: loading ? '#ccc' : '#475522',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold'
+            }}
           />
         </form>
 
