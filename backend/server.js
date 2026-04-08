@@ -34,6 +34,14 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// ✅ FIXED: Move express.json() middleware BEFORE route definitions
+app.use(express.json());
+
+// 3. Static Files (Note: Vercel is read-only; use Cloudinary for real uploads)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ✅ FIXED: Now this route will properly receive req.body
 app.post('/api/contact', (req, res) => {
   const { name, email, message } = req.body;
   
@@ -45,10 +53,6 @@ app.post('/api/contact', (req, res) => {
     message: "Thank you! Your recommendation has been received." 
   });
 });
-app.use(express.json());
-
-// 3. Static Files (Note: Vercel is read-only; use Cloudinary for real uploads)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 4. API Routes
 app.get('/api/health', (req, res) => {
