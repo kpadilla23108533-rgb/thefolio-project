@@ -1,197 +1,205 @@
+// frontend/src/pages/AdminPage.js
 import { useState, useEffect } from 'react';
 import API from '../api/axios';
 
-function AdminPage() {
-  const [users, setUsers] = useState([]);
-  const [posts, setPosts] = useState([]);
-  const [recommendations, setRecommendations] = useState([]);
-  const [tab, setTab] = useState('users');
+const AdminPage = () => {
+  const [users, setUsers]     = useState([]);
+  const [posts, setPosts]     = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [tab, setTab]         = useState('users');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [selectedMsg, setSelectedMsg] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [ur, pr, rr] = await Promise.allSettled([
-          API.get('/admin/users'),
-          API.get('/admin/posts'),
-          API.get('/admin/messages'), // Pulls from your contact/recommendation collection
-        ]);
-
-        if (ur.status === 'fulfilled') setUsers(ur.value.data);
-        if (pr.status === 'fulfilled') setPosts(pr.value.data);
-        if (rr.status === 'fulfilled') setRecommendations(rr.value.data);
-      } catch (err) {
-        setError('Failed to load admin data.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    Promise.all([
+      API.get('/admin/users'),
+      API.get('/admin/posts'),
+      API.get('/admin/contacts'),
+    ])
+      .then(([usersRes, postsRes, msgRes]) => {
+        setUsers(usersRes.data);
+        setPosts(postsRes.data);
+        setMessages(msgRes.data);
+      })
+      .catch(() => {
+        // If /admin/contacts isn't wired yet, just log and continue
+        console.warn('Could not load one or more admin endpoints.');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  /* ── Handlers ── */
   const toggleStatus = async (id) => {
     try {
       const { data } = await API.put(`/admin/users/${id}/status`);
-      setUsers(prev => prev.map(u => u._id === id ? data.user : u));
-    } catch { alert('Failed to update user status.'); }
+      setUsers(users.map(u => u._id === id ? data.user : u));
+    } catch {
+      alert('Failed to update user status.');
+    }
   };
 
   const removePost = async (id) => {
     if (!window.confirm('Mark this post as removed?')) return;
     try {
       await API.put(`/admin/posts/${id}/remove`);
-      setPosts(prev => prev.map(p => p._id === id ? { ...p, status: 'removed' } : p));
-    } catch { alert('Failed to remove post.'); }
+      setPosts(posts.map(p => p._id === id ? { ...p, status: 'removed' } : p));
+    } catch {
+      alert('Failed to remove post.');
+    }
   };
 
-  const deleteRecommendation = async (id) => {
-    if (!window.confirm('Delete this recommendation forever?')) return;
-    try {
-      await API.delete(`/admin/messages/${id}`);
-      setRecommendations(prev => prev.filter(r => r._id !== id));
-    } catch { alert('Failed to delete recommendation.'); }
-  };
-
-  /* ── Stats Calculations ── */
-  const activeUsers = users.filter(u => u.status === 'active').length;
-  const deactivatedUsers = users.filter(u => u.status !== 'active' && u.role !== 'admin').length;
-
-  /* ── Styles ── */
-  const navContainerStyle = {
-    display: 'inline-flex',
-    background: 'rgba(0, 0, 0, 0.05)',
-    padding: '6px',
-    borderRadius: '14px',
-    marginBottom: '35px',
-    border: '1px solid var(--border-clr)',
-  };
-
-  const navButtonStyle = (active) => ({
-    padding: '12px 24px',
-    borderRadius: '10px',
-    border: 'none',
+  // ── Style helpers ──────────────────────────────────────────────────
+  const tabBtnStyle = (value) => ({
+    padding: '10px 22px',
+    background: tab === value ? 'var(--olive)' : 'transparent',
+    color: tab === value ? '#f5f0eb' : 'var(--text-main)',
+    border: '2px solid var(--olive)',
+    borderRadius: 'var(--radius-sm)',
+    fontWeight: '600',
     cursor: 'pointer',
-    fontWeight: '700',
-    fontSize: '0.85rem',
-    textTransform: 'uppercase',
-    transition: 'all 0.3s ease',
-    background: active ? 'var(--snd-bg-color)' : 'transparent',
-    color: active ? '#fff' : 'var(--text-color)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
+    fontSize: '0.9rem',
+    transition: 'all 0.2s ease',
+    fontFamily: "'DM Sans', sans-serif",
   });
 
-  const cardStyle = {
-    background: 'var(--content-bg)',
-    border: '1px solid var(--border-clr)',
-    borderRadius: '12px',
-    padding: '20px',
-    textAlign: 'center',
+  const badgeStyle = (status) => ({
+    display: 'inline-block',
+    padding: '3px 10px',
+    borderRadius: '20px',
+    fontSize: '0.78rem',
+    fontWeight: '700',
+    background: status === 'active' || status === 'published'
+      ? 'rgba(71,85,34,0.12)' : 'rgba(180,60,60,0.12)',
+    color: status === 'active' || status === 'published' ? 'var(--success)' : 'var(--danger)',
+    border: `1px solid ${status === 'active' || status === 'published' ? 'var(--success)' : 'var(--danger)'}`,
+    letterSpacing: '0.02em',
+  });
+
+  const thStyle = {
+    padding: '12px 14px',
+    textAlign: 'left',
+    background: 'var(--olive)',
+    color: '#f5f0eb',
+    fontWeight: '600',
+    fontSize: '0.85rem',
+    letterSpacing: '0.03em',
+    border: 'none',
+    whiteSpace: 'nowrap',
   };
 
-  if (loading) return <div className="content" style={{textAlign: 'center', padding: '50px'}}>Loading Admin Dashboard...</div>;
+  const tdStyle = {
+    padding: '12px 14px',
+    borderBottom: '1px solid var(--border-light)',
+    color: 'var(--text-main)',
+    verticalAlign: 'middle',
+    fontSize: '0.9rem',
+  };
+
+  if (loading) return (
+    <div className="content" style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+      <p>Loading admin data…</p>
+    </div>
+  );
 
   return (
-    <main className="main-content">
-      <div className="content">
-        <h2 style={{ marginBottom: '25px' }}>🛡️ Admin Management</h2>
+    <div className="content">
+      {/* Dashboard header */}
+      <div style={{ marginBottom: '28px' }}>
+        <h2 style={{ marginBottom: '6px' }}>🛡️ Admin Dashboard</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          Manage members, posts, and view contact recommendations.
+        </p>
+      </div>
 
-        {error && <div style={{ color: 'red', marginBottom: '20px' }}>{error}</div>}
-
-        {/* Dashboard Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-          {[
-            { label: 'Total Members', value: users.length, icon: '👥', color: 'var(--text-color)' },
-            { label: 'Active', value: activeUsers, icon: '✅', color: '#2e7d32' },
-            { label: 'Deactivated', value: deactivatedUsers, icon: '🚫', color: '#e53935' },
-            { label: 'Recommendations', value: recommendations.length, icon: '🌟', color: '#fbc02d' },
-          ].map(card => (
-            <div key={card.label} style={cardStyle}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>{card.icon}</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: '800', color: card.color }}>{card.value}</div>
-              <div style={{ opacity: 0.6, fontSize: '0.75rem', textTransform: 'uppercase' }}>{card.label}</div>
+      {/* Stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        {[
+          { label: 'Total Members',   value: users.length,                                     icon: '👥' },
+          { label: 'Active Members',  value: users.filter(u => u.status === 'active').length,  icon: '✅' },
+          { label: 'Total Posts',     value: posts.length,                                     icon: '📝' },
+          { label: 'Published',       value: posts.filter(p => p.status === 'published').length, icon: '🚀' },
+          { label: 'Messages',        value: messages.length,                                  icon: '✉️' },
+        ].map(stat => (
+          <div key={stat.label} style={{
+            background: 'var(--card-bg)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            padding: '18px 20px',
+            boxShadow: 'var(--shadow-sm)',
+          }}>
+            <div style={{ fontSize: '1.6rem', marginBottom: '6px' }}>{stat.icon}</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: '700', fontFamily: "'Playfair Display', serif", color: 'var(--text-main)', lineHeight: 1 }}>
+              {stat.value}
             </div>
-          ))}
-        </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>{stat.label}</div>
+          </div>
+        ))}
+      </div>
 
-        {/* Tab Navigation */}
-        <div style={navContainerStyle}>
-          <button onClick={() => setTab('users')} style={navButtonStyle(tab === 'users')}>
-            <span>👥</span> Members
-          </button>
-          <button onClick={() => setTab('posts')} style={navButtonStyle(tab === 'posts')}>
-            <span>📝</span> Posts
-          </button>
-          <button onClick={() => setTab('recommendations')} style={navButtonStyle(tab === 'recommendations')}>
-            <span>🌟</span> Recommendations
-          </button>
-        </div>
+      {/* Tab switcher */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <button style={tabBtnStyle('users')} onClick={() => setTab('users')}>
+          Members ({users.length})
+        </button>
+        <button style={tabBtnStyle('posts')} onClick={() => setTab('posts')}>
+          All Posts ({posts.length})
+        </button>
+        <button style={tabBtnStyle('messages')} onClick={() => { setTab('messages'); setSelectedMsg(null); }}>
+          📬 Messages ({messages.length})
+        </button>
+      </div>
 
-        {/* Tab Content Area */}
-        <div style={{ background: 'var(--content-bg)', border: '1px solid var(--border-clr)', borderRadius: '15px', padding: '25px' }}>
-          
-          {/* Members Table */}
-          {tab === 'users' && (
-            <div style={{ overflowX: 'auto' }}>
+      {/* ── Members Tab ── */}
+      {tab === 'users' && (
+        <>
+          <h3 style={{ marginBottom: '16px', color: 'var(--text-main)' }}>Member Accounts</h3>
+          {users.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No members registered yet.</p>
+          ) : (
+            <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border-clr)' }}>
-                    <th style={{ textAlign: 'left', padding: '15px' }}>Member</th>
-                    <th style={{ textAlign: 'left', padding: '15px' }}>Status</th>
-                    <th style={{ textAlign: 'right', padding: '15px' }}>Action</th>
+                  <tr>
+                    <th style={thStyle}>Name</th>
+                    <th style={thStyle}>Email</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Joined</th>
+                    <th style={thStyle}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u._id} style={{ borderBottom: '1px solid var(--border-clr)' }}>
-                      <td style={{ padding: '15px' }}>
-                        <strong>{u.name}</strong><br/><small style={{opacity: 0.6}}>{u.email}</small>
+                    <tr key={u._id} style={{ background: 'var(--card-bg)' }}>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '34px', height: '34px', borderRadius: '50%',
+                            background: 'linear-gradient(135deg, var(--olive), var(--olive-light))',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#f5f0eb', fontWeight: '700', fontSize: '0.85rem', flexShrink: 0,
+                          }}>
+                            {u.name?.charAt(0).toUpperCase()}
+                          </div>
+                          <strong>{u.name}</strong>
+                        </div>
                       </td>
-                      <td style={{ padding: '15px' }}>
-                        <span style={{ 
-                          padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '800',
-                          background: u.status === 'active' ? 'rgba(46,125,50,0.1)' : 'rgba(229,57,53,0.1)',
-                          color: u.status === 'active' ? '#2e7d32' : '#e53935'
-                        }}>
-                          {u.status.toUpperCase()}
-                        </span>
+                      <td style={{ ...tdStyle, color: 'var(--text-muted)' }}>{u.email}</td>
+                      <td style={tdStyle}>
+                        <span style={badgeStyle(u.status)}>{u.status}</span>
                       </td>
-                      <td style={{ padding: '15px', textAlign: 'right' }}>
-                        {u.role !== 'admin' ? (
-                          <button onClick={() => toggleStatus(u._id)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', background: u.status === 'active' ? '#e53935' : '#2e7d32' }}>
-                            {u.status === 'active' ? 'Deactivate' : 'Activate'}
-                          </button>
-                        ) : '—'}
+                      <td style={{ ...tdStyle, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {new Date(u.createdAt).toLocaleDateString()}
                       </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Posts Table */}
-          {tab === 'posts' && (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border-clr)' }}>
-                    <th style={{ textAlign: 'left', padding: '15px' }}>Post Title</th>
-                    <th style={{ textAlign: 'left', padding: '15px' }}>Author</th>
-                    <th style={{ textAlign: 'right', padding: '15px' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {posts.map(p => (
-                    <tr key={p._id} style={{ borderBottom: '1px solid var(--border-clr)' }}>
-                      <td style={{ padding: '15px', fontWeight: '600' }}>{p.title}</td>
-                      <td style={{ padding: '15px' }}>{p.author?.name || 'Unknown Author'}</td>
-                      <td style={{ padding: '15px', textAlign: 'right' }}>
-                        <button onClick={() => removePost(p._id)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e53935', background: 'none', color: '#e53935', cursor: 'pointer' }}>
-                          Remove
+                      <td style={tdStyle}>
+                        <button
+                          onClick={() => toggleStatus(u._id)}
+                          style={{
+                            padding: '5px 12px', border: 'none', borderRadius: 'var(--radius-sm)',
+                            fontWeight: '600', cursor: 'pointer', fontSize: '0.82rem',
+                            background: u.status === 'active' ? 'var(--danger)' : 'var(--success)',
+                            color: '#fff', transition: 'opacity 0.2s',
+                          }}
+                        >
+                          {u.status === 'active' ? 'Deactivate' : 'Activate'}
                         </button>
                       </td>
                     </tr>
@@ -200,40 +208,211 @@ function AdminPage() {
               </table>
             </div>
           )}
+        </>
+      )}
 
-          {/* Recommendations View */}
-          {tab === 'recommendations' && (
-            <div style={{ display: 'grid', gap: '20px' }}>
-              {recommendations.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px', opacity: 0.5 }}>No recommendations yet.</div>
-              ) : (
-                recommendations.map(r => (
-                  <div key={r._id} style={{ border: '1px solid var(--border-clr)', padding: '20px', borderRadius: '12px', position: 'relative' }}>
-                    <button 
-                      onClick={() => deleteRecommendation(r._id)} 
-                      style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer' }}
-                    >
-                      🗑️
-                    </button>
-                    <div style={{ marginBottom: '10px' }}>
-                      <strong>{r.name}</strong> <small style={{ opacity: 0.6 }}>({r.email})</small>
-                    </div>
-                    <p style={{ margin: 0, padding: '15px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', fontStyle: 'italic' }}>
-                      "{r.message}"
-                    </p>
-                    <div style={{ textAlign: 'right', fontSize: '0.7rem', opacity: 0.4, marginTop: '10px' }}>
-                      {new Date(r.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))
-              )}
+      {/* ── Posts Tab ── */}
+      {tab === 'posts' && (
+        <>
+          <h3 style={{ marginBottom: '16px', color: 'var(--text-main)' }}>All Posts</h3>
+          {posts.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No posts yet.</p>
+          ) : (
+            <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Title</th>
+                    <th style={thStyle}>Author</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Date</th>
+                    <th style={thStyle}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {posts.map(p => (
+                    <tr key={p._id} style={{ background: 'var(--card-bg)' }}>
+                      <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.title}
+                      </td>
+                      <td style={tdStyle}>{p.author?.name}</td>
+                      <td style={tdStyle}>
+                        <span style={badgeStyle(p.status)}>{p.status}</span>
+                      </td>
+                      <td style={{ ...tdStyle, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {new Date(p.createdAt).toLocaleDateString()}
+                      </td>
+                      <td style={tdStyle}>
+                        {p.status === 'published' ? (
+                          <button
+                            onClick={() => removePost(p._id)}
+                            style={{
+                              padding: '5px 14px', border: 'none', borderRadius: 'var(--radius-sm)',
+                              fontWeight: '600', cursor: 'pointer', fontSize: '0.82rem',
+                              background: 'var(--danger)', color: '#fff',
+                            }}
+                          >
+                            🗑 Remove
+                          </button>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
+        </>
+      )}
 
-        </div>
-      </div>
-    </main>
+      {/* ── Messages / Contact Inbox Tab (VIEW ONLY) ── */}
+      {tab === 'messages' && (
+        <>
+          <h3 style={{ marginBottom: '6px', color: 'var(--text-main)' }}>📬 Contact Recommendations</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '20px' }}>
+            Messages submitted by visitors through the Contact page. Read-only.
+          </p>
+
+          {messages.length === 0 ? (
+            <div style={{
+              background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-md)', padding: '48px 24px',
+              textAlign: 'center', color: 'var(--text-muted)', boxShadow: 'var(--shadow-sm)',
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📭</div>
+              <p style={{ fontWeight: '600', color: 'var(--text-main)', marginBottom: '6px' }}>No messages yet</p>
+              <p style={{ fontSize: '0.88rem' }}>When visitors submit the contact form, their messages will appear here.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 300px) 1fr', gap: '20px', alignItems: 'flex-start' }}>
+
+              {/* Message list sidebar */}
+              <div style={{
+                background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+                borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)',
+              }}>
+                <div style={{
+                  padding: '12px 16px', background: 'var(--olive)', color: '#f5f0eb',
+                  fontSize: '0.85rem', fontWeight: '600',
+                }}>
+                  ✉️ All Messages
+                </div>
+                {messages.map(msg => {
+                  const isOpen = selectedMsg?._id === msg._id;
+                  return (
+                    <button
+                      key={msg._id}
+                      onClick={() => setSelectedMsg(msg)}
+                      style={{
+                        width: '100%', padding: '14px 16px', textAlign: 'left',
+                        display: 'flex', flexDirection: 'column', gap: '3px',
+                        background: isOpen ? 'var(--olive-pale)' : 'transparent',
+                        border: 'none', borderBottom: '1px solid var(--border-light)',
+                        cursor: 'pointer', transition: 'background 0.15s',
+                        borderLeft: isOpen ? '3px solid var(--olive)' : '3px solid transparent',
+                      }}
+                    >
+                      <div style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {msg.name}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {msg.message ? msg.message.slice(0, 40) + (msg.message.length > 40 ? '…' : '') : '(no message)'}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : ''}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Message detail panel */}
+              <div>
+                {!selectedMsg ? (
+                  <div style={{
+                    background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+                    borderRadius: 'var(--radius-md)', padding: '48px 24px',
+                    textAlign: 'center', color: 'var(--text-muted)', boxShadow: 'var(--shadow-sm)',
+                  }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📩</div>
+                    <p style={{ fontWeight: '600', color: 'var(--text-main)', marginBottom: '6px' }}>No message selected</p>
+                    <p style={{ fontSize: '0.88rem' }}>Click a message on the left to read it.</p>
+                  </div>
+                ) : (
+                  <div style={{
+                    background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+                    borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)',
+                  }}>
+                    {/* Message header */}
+                    <div style={{
+                      padding: '16px 20px', background: 'var(--olive)',
+                      display: 'flex', alignItems: 'center', gap: '14px',
+                    }}>
+                      <div style={{
+                        width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
+                        background: 'rgba(255,255,255,0.2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#f5f0eb', fontWeight: '700', fontSize: '1rem',
+                      }}>
+                        {selectedMsg.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '700', color: '#f5f0eb', fontSize: '1rem' }}>{selectedMsg.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(245,240,235,0.75)' }}>{selectedMsg.email}</div>
+                      </div>
+                      {selectedMsg.createdAt && (
+                        <div style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'rgba(245,240,235,0.65)' }}>
+                          {new Date(selectedMsg.createdAt).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Message body */}
+                    <div style={{ padding: '24px 20px' }}>
+                      <div style={{
+                        fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.08em',
+                        textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px',
+                      }}>
+                        Message / Recommendation
+                      </div>
+                      <div style={{
+                        background: 'var(--cream-light)',
+                        border: '1px solid var(--border-light)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '18px 20px',
+                        color: 'var(--text-main)',
+                        lineHeight: '1.75',
+                        fontSize: '0.96rem',
+                        whiteSpace: 'pre-wrap',
+                        minHeight: '120px',
+                      }}>
+                        {selectedMsg.message || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No message body.</span>}
+                      </div>
+
+                      {/* Read-only badge */}
+                      <div style={{
+                        marginTop: '20px',
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        background: 'var(--olive-pale)',
+                        border: '1px solid var(--olive)',
+                        borderRadius: '20px',
+                        padding: '4px 14px',
+                        fontSize: '0.78rem', fontWeight: '600', color: 'var(--olive-dark)',
+                      }}>
+                        🔒 View Only — replies are not supported
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
-}
+};
 
 export default AdminPage;
