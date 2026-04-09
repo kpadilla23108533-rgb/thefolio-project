@@ -4,30 +4,39 @@ import API from '../api/axios';
 const AdminPage = () => {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
-  const [recommendations, setRecommendations] = useState([]); // New state for contact messages
+  const [recommendations, setRecommendations] = useState([]);
   const [tab, setTab] = useState('users');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      API.get('/admin/users'),
-      API.get('/admin/posts'),
-      API.get('/contact'), // Fetching the messages submitted via the ContactPage
-    ])
-      .then(([usersRes, postsRes, contactRes]) => {
+    const fetchData = async () => {
+      try {
+        // Fetching all admin data in parallel
+        const [usersRes, postsRes, contactRes] = await Promise.all([
+          API.get('/admin/users'),
+          API.get('/admin/posts'),
+          API.get('/contact'), 
+        ]);
+
         setUsers(usersRes.data);
         setPosts(postsRes.data);
         setRecommendations(contactRes.data);
-      })
-      .catch((err) => console.error("Error loading admin data:", err))
-      .finally(() => setLoading(false));
+      } catch (err) {
+        console.error("Error loading admin data:", err);
+        setError('Failed to load dashboard data. Please check your permissions.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  // ── Actions ────────────────────────────────────────────────────────
+  /* ── Actions ── */
   const toggleStatus = async (id) => {
     try {
       const { data } = await API.put(`/admin/users/${id}/status`);
-      setUsers(users.map(u => u._id === id ? data.user : u));
+      setUsers(prev => prev.map(u => u._id === id ? data.user : u));
     } catch {
       alert('Failed to update user status.');
     }
@@ -37,156 +46,178 @@ const AdminPage = () => {
     if (!window.confirm('Mark this post as removed?')) return;
     try {
       await API.put(`/admin/posts/${id}/remove`);
-      setPosts(posts.map(p => p._id === id ? { ...p, status: 'removed' } : p));
+      setPosts(prev => prev.map(p => p._id === id ? { ...p, status: 'removed' } : p));
     } catch {
       alert('Failed to remove post.');
     }
   };
 
-  // ── Style helpers (Shared) ─────────────────────────────────────────
-  const tabBtnStyle = (value) => ({
-    padding: '10px 22px',
-    background: tab === value ? 'var(--olive)' : 'transparent',
-    color: tab === value ? '#f5f0eb' : 'var(--text-main)',
+  const deleteRecommendation = async (id) => {
+    if (!window.confirm('Delete this recommendation forever?')) return;
+    try {
+      await API.delete(`/contact/${id}`);
+      setRecommendations(prev => prev.filter(r => r._id !== id));
+    } catch {
+      alert('Failed to delete recommendation.');
+    }
+  };
+
+  /* ── Styles ── */
+  const tabBtnStyle = (active) => ({
+    padding: '12px 24px',
+    background: active ? 'var(--olive)' : 'transparent',
+    color: active ? '#f5f0eb' : 'var(--text-main)',
     border: '2px solid var(--olive)',
-    borderRadius: 'var(--radius-sm)',
-    fontWeight: '600',
+    borderRadius: '8px',
+    fontWeight: '700',
     cursor: 'pointer',
-    fontSize: '0.9rem',
-    transition: 'all 0.2s ease',
+    fontSize: '0.85rem',
+    textTransform: 'uppercase',
+    transition: 'all 0.3s ease',
   });
 
-  const thStyle = {
-    padding: '12px 14px',
+  const tableHeaderStyle = {
+    padding: '15px',
     textAlign: 'left',
     background: 'var(--olive)',
-    color: '#f5f0eb',
-    fontSize: '0.85rem',
-  };
-
-  const tdStyle = {
-    padding: '12px 14px',
-    borderBottom: '1px solid var(--border-light)',
+    color: '#fff',
     fontSize: '0.9rem',
   };
 
-  if (loading) return <div className="content" style={{ textAlign: 'center', padding: '60px' }}>Loading...</div>;
+  if (loading) return <div className="content" style={{ textAlign: 'center', padding: '100px' }}>Loading Admin Dashboard...</div>;
 
   return (
-    <div className="content">
-      <div style={{ marginBottom: '28px' }}>
-        <h2>Admin Dashboard</h2>
-        <p style={{ color: 'var(--text-muted)' }}>Manage your community and view local recommendations.</p>
-      </div>
-
-      {/* Tab switcher */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
-        <button style={tabBtnStyle('users')} onClick={() => setTab('users')}>Members</button>
-        <button style={tabBtnStyle('posts')} onClick={() => setTab('posts')}>Posts</button>
-        <button style={tabBtnStyle('recommendations')} onClick={() => setTab('recommendations')}>Recommendations</button>
-      </div>
-
-      {/* ── Members Tab ── */}
-      {tab === 'users' && (
-        <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Name</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u._id} style={{ background: 'var(--card-bg)' }}>
-                  <td style={tdStyle}><strong>{u.name}</strong><br/><small>{u.email}</small></td>
-                  <td style={tdStyle}>{u.status}</td>
-                  <td style={tdStyle}>
-                    <button onClick={() => toggleStatus(u._id)} style={{ background: 'var(--olive)', color: '#fff', border: 'none', padding: '5px 10px', cursor: 'pointer' }}>
-                      Toggle Status
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <main className="main-content">
+      <div className="content">
+        <div style={{ marginBottom: '30px' }}>
+          <h2 style={{ fontSize: '2rem', color: 'var(--text-main)' }}>🛡️ Admin Management</h2>
+          <p style={{ color: 'var(--text-muted)' }}>Overview of community members, content, and visitor feedback.</p>
         </div>
-      )}
 
-      {/* ── Recommendations Tab (Replaced Direct Messages) ── */}
-      {tab === 'recommendations' && (
-        <>
-          <h3 style={{ marginBottom: '16px' }}>Visitor Recommendations</h3>
-          {recommendations.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>No recommendations received yet.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: '16px' }}>
-              {recommendations.map((rec) => (
-                <div 
-                  key={rec._id} 
-                  style={{ 
-                    background: 'var(--card-bg)', 
-                    padding: '20px', 
-                    borderRadius: '8px', 
-                    border: '1px solid var(--border-light)',
-                    boxShadow: 'var(--shadow-sm)'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <strong style={{ color: 'var(--olive)', fontSize: '1.1rem' }}>{rec.name}</strong>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(rec.createdAt).toLocaleDateString()}
-                    </span>
+        {error && <div style={{ color: '#e53935', background: '#ffebee', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>{error}</div>}
+
+        {/* Tab Navigation */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '35px' }}>
+          <button onClick={() => setTab('users')} style={tabBtnStyle(tab === 'users')}>Members</button>
+          <button onClick={() => setTab('posts')} style={tabBtnStyle(tab === 'posts')}>Posts</button>
+          <button onClick={() => setTab('recommendations')} style={tabBtnStyle(tab === 'recommendations')}>
+            Recommendations {recommendations.length > 0 && `(${recommendations.length})`}
+          </button>
+        </div>
+
+        {/* ── Members Tab ── */}
+        {tab === 'users' && (
+          <div style={{ overflowX: 'auto', border: '1px solid var(--border-light)', borderRadius: '12px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--card-bg)' }}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderStyle}>User Details</th>
+                  <th style={tableHeaderStyle}>Status</th>
+                  <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u._id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '15px' }}>
+                      <div style={{ fontWeight: '700' }}>{u.name}</div>
+                      <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>{u.email}</div>
+                    </td>
+                    <td style={{ padding: '15px' }}>
+                      <span style={{ 
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold',
+                        background: u.status === 'active' ? '#e8f5e9' : '#ffebee',
+                        color: u.status === 'active' ? '#2e7d32' : '#c62828'
+                      }}>
+                        {u.status?.toUpperCase() || 'UNKNOWN'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '15px', textAlign: 'right' }}>
+                      {u.role !== 'admin' ? (
+                        <button 
+                          onClick={() => toggleStatus(u._id)}
+                          style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: 'var(--olive)', color: 'white' }}
+                        >
+                          Toggle Status
+                        </button>
+                      ) : <span style={{ opacity: 0.5 }}>Admin</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Posts Tab ── */}
+        {tab === 'posts' && (
+          <div style={{ overflowX: 'auto', border: '1px solid var(--border-light)', borderRadius: '12px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--card-bg)' }}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderStyle}>Post Title</th>
+                  <th style={tableHeaderStyle}>Author</th>
+                  <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.length === 0 ? (
+                  <tr><td colSpan="3" style={{ padding: '30px', textAlign: 'center', opacity: 0.5 }}>No posts found.</td></tr>
+                ) : (
+                  posts.map(p => (
+                    <tr key={p._id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                      <td style={{ padding: '15px', fontWeight: '600' }}>{p.title}</td>
+                      <td style={{ padding: '15px' }}>{p.author?.name || 'Anonymous'}</td>
+                      <td style={{ padding: '15px', textAlign: 'right' }}>
+                        <button 
+                          onClick={() => removePost(p._id)}
+                          style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #c62828', background: 'transparent', color: '#c62828', cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Recommendations Tab ── */}
+        {tab === 'recommendations' && (
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {recommendations.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '50px', background: 'var(--card-bg)', borderRadius: '12px', opacity: 0.6 }}>
+                No visitor recommendations yet.
+              </div>
+            ) : (
+              recommendations.map(rec => (
+                <div key={rec._id} style={{ background: 'var(--card-bg)', padding: '25px', borderRadius: '12px', border: '1px solid var(--border-light)', position: 'relative' }}>
+                  <button 
+                    onClick={() => deleteRecommendation(rec._id)}
+                    style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                  >
+                    🗑️
+                  </button>
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong style={{ fontSize: '1.1rem', color: 'var(--olive)' }}>{rec.name}</strong>
+                    <span style={{ margin: '0 10px', opacity: 0.3 }}>|</span>
+                    <small style={{ color: 'var(--text-muted)' }}>{rec.email}</small>
                   </div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '12px' }}>
-                    Email: {rec.email}
-                  </div>
-                  <p style={{ 
-                    lineHeight: '1.6', 
-                    color: 'var(--text-main)', 
-                    fontStyle: rec.message ? 'normal' : 'italic',
-                    background: 'var(--cream-light)',
-                    padding: '12px',
-                    borderRadius: '4px'
-                  }}>
-                    {rec.message || "No message provided."}
+                  <p style={{ margin: 0, padding: '15px', background: 'var(--cream-light)', borderRadius: '8px', fontStyle: 'italic', color: 'var(--text-main)' }}>
+                    "{rec.message || "No content provided."}"
                   </p>
+                  <div style={{ marginTop: '15px', fontSize: '0.75rem', opacity: 0.5, textAlign: 'right' }}>
+                    Received: {new Date(rec.createdAt).toLocaleString()}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ── Posts Tab ── */}
-      {tab === 'posts' && (
-        <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Title</th>
-                <th style={thStyle}>Author</th>
-                <th style={thStyle}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {posts.map(p => (
-                <tr key={p._id} style={{ background: 'var(--card-bg)' }}>
-                  <td style={tdStyle}>{p.title}</td>
-                  <td style={tdStyle}>{p.author?.name}</td>
-                  <td style={tdStyle}>
-                    <button onClick={() => removePost(p._id)} style={{ background: 'var(--danger)', color: '#fff', border: 'none', padding: '5px 10px', cursor: 'pointer' }}>
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </main>
   );
 };
 
