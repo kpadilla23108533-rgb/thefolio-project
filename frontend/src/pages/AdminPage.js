@@ -4,7 +4,7 @@ import API from '../api/axios';
 function AdminPage() {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
-  const [messages, setMessages] = useState([]);
+  const [recommendations, setRecommendations] = useState([]); // Renamed for clarity
   const [tab, setTab] = useState('users');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -12,16 +12,15 @@ function AdminPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [ur, pr, mr] = await Promise.allSettled([
+        const [ur, pr, rr] = await Promise.allSettled([
           API.get('/admin/users'),
           API.get('/admin/posts'),
-          API.get('/admin/messages'),
+          API.get('/admin/messages'), // Still hitting the message endpoint
         ]);
 
-        // Using fulfilled checks to ensure partial data still loads
         if (ur.status === 'fulfilled') setUsers(ur.value.data);
         if (pr.status === 'fulfilled') setPosts(pr.value.data);
-        if (mr.status === 'fulfilled') setMessages(mr.value.data);
+        if (rr.status === 'fulfilled') setRecommendations(rr.value.data);
       } catch (err) {
         setError('Failed to load admin data.');
       } finally {
@@ -47,12 +46,12 @@ function AdminPage() {
     } catch { alert('Failed to remove post.'); }
   };
 
-  const deleteMessage = async (id) => {
-    if (!window.confirm('Delete this message forever?')) return;
+  const deleteRecommendation = async (id) => {
+    if (!window.confirm('Delete this recommendation forever?')) return;
     try {
       await API.delete(`/admin/messages/${id}`);
-      setMessages(prev => prev.filter(m => m._id !== id));
-    } catch { alert('Failed to delete message.'); }
+      setRecommendations(prev => prev.filter(r => r._id !== id));
+    } catch { alert('Failed to delete recommendation.'); }
   };
 
   /* ── Stats Calculations ── */
@@ -111,14 +110,9 @@ function AdminPage() {
             { label: 'Total Members', value: users.length, icon: '👥', color: 'var(--text-color)' },
             { label: 'Active', value: activeUsers, icon: '✅', color: '#2e7d32' },
             { label: 'Deactivated', value: deactivatedUsers, icon: '🚫', color: '#e53935' },
-            { label: 'Messages', value: messages.length, icon: '✉️', color: '#1976d2' },
+            { label: 'Recommendations', value: recommendations.length, icon: '🌟', color: '#fbc02d' },
           ].map(card => (
-            <div 
-                key={card.label} 
-                style={cardStyle} 
-                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} 
-                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
+            <div key={card.label} style={cardStyle}>
               <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>{card.icon}</div>
               <div style={{ fontSize: '1.8rem', fontWeight: '800', color: card.color }}>{card.value}</div>
               <div style={{ opacity: 0.6, fontSize: '0.75rem', textTransform: 'uppercase' }}>{card.label}</div>
@@ -134,11 +128,11 @@ function AdminPage() {
           <button onClick={() => setTab('posts')} style={navButtonStyle(tab === 'posts')}>
             <span>📝</span> Posts
           </button>
-          <button onClick={() => setTab('messages')} style={navButtonStyle(tab === 'messages')}>
-            <span>✉️</span> Inbox 
-            {messages.length > 0 && (
-              <span style={{ marginLeft: '8px', background: tab === 'messages' ? 'rgba(255,255,255,0.3)' : 'var(--snd-bg-color)', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', color: 'white' }}>
-                {messages.length}
+          <button onClick={() => setTab('recommendations')} style={navButtonStyle(tab === 'recommendations')}>
+            <span>🌟</span> Recommendations
+            {recommendations.length > 0 && (
+              <span style={{ marginLeft: '8px', background: tab === 'recommendations' ? 'rgba(255,255,255,0.3)' : 'var(--snd-bg-color)', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', color: 'white' }}>
+                {recommendations.length}
               </span>
             )}
           </button>
@@ -147,7 +141,7 @@ function AdminPage() {
         {/* Tab Content Area */}
         <div style={{ background: 'var(--content-bg)', border: '1px solid var(--border-clr)', borderRadius: '15px', padding: '25px' }}>
           
-          {/* Members Table */}
+          {/* Members Table (Existing) */}
           {tab === 'users' && (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -187,7 +181,7 @@ function AdminPage() {
             </div>
           )}
 
-          {/* Posts Table */}
+          {/* Posts Table (Existing) */}
           {tab === 'posts' && (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -219,21 +213,32 @@ function AdminPage() {
             </div>
           )}
 
-          {/* Inbox Content */}
-          {tab === 'messages' && (
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {messages.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px', opacity: 0.5 }}>Your inbox is empty.</div>
+          {/* Recommendations Content (New) */}
+          {tab === 'recommendations' && (
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {recommendations.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px', opacity: 0.5 }}>No recommendations received yet.</div>
               ) : (
-                messages.map(m => (
-                  <div key={m._id} style={{ border: '1px solid var(--border-clr)', padding: '20px', borderRadius: '12px', position: 'relative' }}>
-                    <button onClick={() => deleteMessage(m._id)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>🗑️</button>
+                recommendations.map(r => (
+                  <div key={r._id} style={{ border: '1px solid var(--border-clr)', padding: '20px', borderRadius: '12px', position: 'relative', background: 'var(--content-bg)' }}>
+                    <button 
+                      onClick={() => deleteRecommendation(r._id)} 
+                      style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                      title="Delete Recommendation"
+                    >
+                      🗑️
+                    </button>
                     <div style={{ marginBottom: '10px' }}>
-                      <strong>{m.name}</strong> <small style={{ opacity: 0.6 }}>({m.email})</small>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--snd-bg-color)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>New Recommendation</span>
+                      <div style={{ marginTop: '5px' }}>
+                        <strong>{r.name}</strong> <small style={{ opacity: 0.6 }}>({r.email})</small>
+                      </div>
                     </div>
-                    <p style={{ margin: 0, padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', fontStyle: 'italic' }}>"{m.message}"</p>
+                    <p style={{ margin: 0, padding: '15px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', borderLeft: '4px solid var(--snd-bg-color)', color: 'var(--text-color)' }}>
+                      {r.message}
+                    </p>
                     <div style={{ textAlign: 'right', fontSize: '0.7rem', opacity: 0.4, marginTop: '10px' }}>
-                      {new Date(m.createdAt).toLocaleString()}
+                      Submitted on {new Date(r.createdAt).toLocaleDateString()} at {new Date(r.createdAt).toLocaleTimeString()}
                     </div>
                   </div>
                 ))
