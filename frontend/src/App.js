@@ -1,4 +1,3 @@
-// frontend/src/App.js
 import { Routes, Route } from 'react-router-dom';
 import Layout         from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,8 +15,6 @@ import EditPostPage   from './pages/EditPostPage';
 import AdminPage      from './pages/AdminPage';
 
 import './App.css';
-
-// ⚠️  BrowserRouter + AuthProvider live in src/index.js
 
 function App() {
   return (

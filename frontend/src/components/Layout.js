@@ -1,4 +1,3 @@
-// frontend/src/components/Layout.js
 import React from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +10,7 @@ import logo from '../pictures/LogoK.jpg';
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
 
   const isActive = (path) => location.pathname === path ? 'active' : '';
 
@@ -20,12 +19,14 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
+  // Helper boolean to check if the current user is an admin
+  const isAdmin = user && user.role === 'admin';
+
   return (
     <>
       {/* ── Header ── */}
       <header className="site-header">
         <div className="header-inner">
-          {/* Left: logo + brand */}
           <div className="header-brand">
             <img src={logo} alt="Travel Journal Logo" className="header-logo" />
             <div className="header-brand-text">
@@ -33,12 +34,8 @@ const Layout = ({ children }) => {
               <span className="header-sub">Explore · Document · Remember</span>
             </div>
           </div>
-
-          {/* Center: decorative compass icon */}
           <div className="header-center-deco" aria-hidden="true">🧭</div>
         </div>
-
-        {/* Dark mode toggle */}
         <Theme />
       </header>
 
@@ -46,24 +43,34 @@ const Layout = ({ children }) => {
       <nav className="horizontal-nav" aria-label="Main navigation">
         <div className="nav-inner">
           <ul className="nav-list">
-            <li><Link to="/home"    className={`nav-link ${isActive('/home')}`}>🏠 Home</Link></li>
-            <li><Link to="/about"   className={`nav-link ${isActive('/about')}`}>📖 About</Link></li>
-            <li><Link to="/contact" className={`nav-link ${isActive('/contact')}`}>✉️ Contact</Link></li>
+            <li><Link to="/home" className={`nav-link ${isActive('/home')}`}>🏠 Home</Link></li>
+            <li><Link to="/about" className={`nav-link ${isActive('/about')}`}>📖 About</Link></li>
+
+            {/* 🔥 Logic: Show Contact ONLY if NOT an admin */}
+            {!isAdmin && (
+              <li>
+                <Link to="/contact" className={`nav-link ${isActive('/contact')}`}>
+                  ✉️ Contact
+                </Link>
+              </li>
+            )}
 
             {!user && (
               <>
                 <li><Link to="/register" className={`nav-link ${isActive('/register')}`}>✍️ Register</Link></li>
-                <li><Link to="/login"    className={`nav-link ${isActive('/login')}`}>🔑 Login</Link></li>
+                <li><Link to="/login" className={`nav-link ${isActive('/login')}`}>🔑 Login</Link></li>
               </>
             )}
 
             {user && (
               <>
                 <li><Link to="/create-post" className={`nav-link ${isActive('/create-post')}`}>✏️ Write</Link></li>
-                <li><Link to="/profile"     className={`nav-link ${isActive('/profile')}`}>👤 Profile</Link></li>
-                {user.role === 'admin' && (
+                <li><Link to="/profile" className={`nav-link ${isActive('/profile')}`}>👤 Profile</Link></li>
+                
+                {isAdmin && (
                   <li><Link to="/admin" className={`nav-link ${isActive('/admin')}`}>🛡️ Admin</Link></li>
                 )}
+                
                 <li>
                   <button className="nav-logout-btn" onClick={handleLogout}>
                     👋 Logout
@@ -87,16 +94,19 @@ const Layout = ({ children }) => {
             <span className="footer-brand-name">Travel Journal</span>
           </div>
 
-          <div className="footer-links">
-            <a href="mailto:krishanepadilla@gmail.com" className="footer-contact-item">
-              <img src={pic5} alt="Gmail" className="footer-icon" />
-              <span>krishanepadilla@gmail.com</span>
-            </a>
-            <a href="https://facebook.com/krishanepadilla" target="_blank" rel="noreferrer" className="footer-contact-item">
-              <img src={pic6} alt="Facebook" className="footer-icon" />
-              <span>krishanepadilla</span>
-            </a>
-          </div>
+          {/* 🔥 Logic: Also hide contact links in footer for admins */}
+          {!isAdmin && (
+            <div className="footer-links">
+              <a href="mailto:krishanepadilla@gmail.com" className="footer-contact-item">
+                <img src={pic5} alt="Gmail" className="footer-icon" />
+                <span>krishanepadilla@gmail.com</span>
+              </a>
+              <a href="https://facebook.com/krishanepadilla" target="_blank" rel="noreferrer" className="footer-contact-item">
+                <img src={pic6} alt="Facebook" className="footer-icon" />
+                <span>krishanepadilla</span>
+              </a>
+            </div>
+          )}
 
           <div className="footer-copy">
             &copy; 2026 Student Portfolio &nbsp;·&nbsp; Made with ❤️ in La Union
