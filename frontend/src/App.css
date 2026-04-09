@@ -149,6 +149,11 @@ blockquote {
   position: relative;
   z-index: 101;
 }
+
+/*
+ * header-inner: brand on the left, right group (compass + toggle) on the right.
+ * The dark-mode toggle now lives INSIDE .header-right, not floating fixed.
+ */
 .header-inner {
   max-width: 1100px;
   margin: 0 auto;
@@ -156,6 +161,7 @@ blockquote {
   align-items: center;
   justify-content: space-between;
 }
+
 .header-brand { display: flex; align-items: center; gap: 14px; }
 .header-logo {
   width: 52px; height: 52px;
@@ -176,13 +182,18 @@ blockquote {
   text-transform: uppercase;
   margin-top: 2px;
 }
-.header-center-deco { font-size: 1.8rem; opacity: 0.6; user-select: none; }
 
-/* Right side of header: compass + toggle side by side */
+/* Right group: compass deco + toggle, right-aligned inside header */
 .header-right {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.header-center-deco {
+  font-size: 1.8rem;
+  opacity: 0.6;
+  user-select: none;
 }
 
 /* ── Navigation ─────────────────────────────────────────────────── */
@@ -219,7 +230,7 @@ blockquote {
 .nav-logout-btn:hover { background: rgba(147,197,253,0.22); border-color: #dbeafe; }
 .nav-user-name { font-size: 0.8rem; opacity: 0.7; font-style: italic; color: rgba(191,219,254,0.7); }
 
-/* ── Theme Toggle — sits inline beside compass icon ─────────────── */
+/* ── Theme Toggle — lives inside .header-right, no fixed positioning ── */
 .mode-toggle {
   background: rgba(255,255,255,0.15);
   border: 1.5px solid rgba(255,255,255,0.3);
@@ -229,7 +240,7 @@ blockquote {
   display: flex; align-items: center; justify-content: center;
   transition: var(--transition);
   flex-shrink: 0;
-  /* No position: fixed — flows naturally inside .header-right */
+  /* Intentionally no position: fixed */
 }
 .mode-toggle:hover { background: rgba(255,255,255,0.25); transform: scale(1.08); }
 
@@ -368,6 +379,7 @@ body.darkmode .drop-zone { background: rgba(255,255,255,0.03); }
 .drop-zone-text { color: var(--text-main); font-size: 0.95rem; margin-bottom: 4px; }
 .drop-zone-link { color: var(--olive); font-weight: 600; }
 .drop-zone-sub  { font-size: 0.8rem; color: var(--text-muted); }
+
 .image-preview-wrap { border-radius: var(--radius-md); overflow: hidden; border: 1.5px solid var(--border-light); box-shadow: var(--shadow-sm); }
 .image-preview { width: 100%; max-height: 280px; object-fit: cover; display: block; }
 .image-preview-info { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--cream-light); font-size: 0.85rem; flex-wrap: wrap; }
@@ -401,29 +413,6 @@ body.darkmode table a { color: var(--olive-light); }
 .admin-table { font-size: 0.88rem; }
 .admin-table th { padding: 12px; text-align: left; background: var(--olive); color: #e0eaff; font-weight: 600; border: none; }
 .admin-table td { padding: 12px; border-bottom: 1px solid var(--border-light); color: var(--text-main); vertical-align: middle; }
-
-/* Admin Reply Panel */
-.admin-reply-panel {
-  background: var(--cream-light);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 20px; margin-top: 16px;
-}
-body.darkmode .admin-reply-panel { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08); }
-.admin-reply-panel h4 { color: var(--text-main); margin-bottom: 12px; font-size: 0.95rem; }
-.admin-thread {
-  display: flex; flex-direction: column; gap: 10px;
-  margin-bottom: 16px; max-height: 260px; overflow-y: auto; padding-right: 4px;
-}
-.admin-thread::-webkit-scrollbar { width: 4px; }
-.admin-thread::-webkit-scrollbar-track { background: transparent; }
-.admin-thread::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
-.thread-msg { padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.88rem; line-height: 1.5; max-width: 85%; }
-.thread-msg.from-user { background: var(--cream); border: 1px solid var(--border-light); color: var(--text-main); align-self: flex-start; }
-body.darkmode .thread-msg.from-user { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.08); }
-.thread-msg.from-admin { background: var(--olive-pale); border: 1px solid rgba(71,85,34,0.2); color: var(--olive-dark); align-self: flex-end; }
-body.darkmode .thread-msg.from-admin { background: rgba(122,173,58,0.15); color: var(--olive-light); }
-.thread-msg-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
 
 /* ── Quiz ───────────────────────────────────────────────────────── */
 .quiz-container {
@@ -513,8 +502,8 @@ body.darkmode .quiz-score-number { color: var(--olive-light); }
   .site-header { padding: 12px 16px; }
   .header-logo { width: 40px; height: 40px; }
   .header-title { font-size: 1rem; }
-  .header-center-deco { display: none; }
   .header-right { gap: 8px; }
+  .header-center-deco { font-size: 1.4rem; }
   .nav-inner { padding: 0 8px; }
   .nav-link { padding: 10px 10px; font-size: 0.82rem; }
   .footer-links { flex-direction: column; gap: 10px; }
