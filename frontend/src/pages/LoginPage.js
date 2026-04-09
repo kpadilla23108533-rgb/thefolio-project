@@ -121,4 +121,15 @@ const LoginPage = () => {
 
         <p style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.9rem' }}>
           Don't have an account?{' '}
-          <Link to="/register" style={{ color: '#475522', fontWeight: 'bold', textDecoration: '
+          <Link to="/register" style={{ color: '#475522', fontWeight: 'bold', textDecoration: '<p style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.9rem' }}>
+          Don't have an account?{' '}
+          <Link to="/register" style={{ color: '#475522', fontWeight: 'bold', textDecoration: 'none' }}>
+            Register here
+          </Link>
+        </p>
+      </div>
+    </main>
+  );
+};
+
+export default LoginPage;
